@@ -1,0 +1,30 @@
+{
+  "name": "music-prediction-exchange-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API for play-money Music Prediction Exchange",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "node --test",
+    "lint": "eslint .",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.22.0",
+    "globals": "^15.15.0",
+    "nodemon": "^3.1.9"
+  }
+}
