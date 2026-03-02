@@ -35,6 +35,7 @@ async function ingestSpotifyData() {
               artists: snapshot.artists,
               spotifyUrl: snapshot.spotifyUrl,
               album: snapshot.album,
+              imageUrl: snapshot.imageUrl,
             }),
           ]
         );

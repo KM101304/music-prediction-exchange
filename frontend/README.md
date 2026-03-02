@@ -30,4 +30,5 @@ Default URL: `http://localhost:3000`
 - Framework preset: Next.js
 - Build command: `npm run build`
 - Output: default Next.js output
+- The app proxies all frontend `/api/*` calls through a Next route handler to the backend URL above.
 - Ensure backend CORS includes frontend origin.

@@ -12,6 +12,21 @@ function niceDate(value) {
   return new Date(value).toLocaleString();
 }
 
+function SongArt({ url, alt }) {
+  if (url) {
+    return (
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-800">
+        <img src={url} alt={alt} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div className="grid h-16 w-16 shrink-0 place-items-center rounded border border-slate-700 bg-[linear-gradient(145deg,#0f172a,#1e293b_45%,#2563eb)]">
+      <span className="text-[9px] uppercase tracking-wide text-slate-200">Track</span>
+    </div>
+  );
+}
+
 export default function MarketDetailPage({ params }) {
   const [market, setMarket] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
@@ -108,10 +123,34 @@ export default function MarketDetailPage({ params }) {
     <div className="space-y-6">
       <section className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="badge">Market #{market.id}</p>
             <h1 className="mt-3 text-xl font-semibold">{market.title}</h1>
             <p className="mt-2 text-sm text-muted">{market.description}</p>
+            {(market.songTitle || market.songArtists?.length > 0 || market.songUrl || market.songImageUrl) && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                <SongArt url={market.songImageUrl} alt={market.songTitle || market.title} />
+                <div className="min-w-0 text-xs">
+                  {market.songTitle && <p className="truncate font-medium text-white">{market.songTitle}</p>}
+                  {market.songArtists?.length > 0 && (
+                    <p className="mt-1 truncate text-slate-300">{market.songArtists.join(', ')}</p>
+                  )}
+                  {market.songUrl && (
+                    <a
+                      href={market.songUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block text-emerald-300 hover:text-emerald-200"
+                    >
+                      Open on Spotify
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+            {!market.songTitle && !market.songImageUrl && market.spotifyTrackId && (
+              <p className="mt-2 text-xs text-slate-400">Song metadata is queued. Run Spotify ingest to populate visuals.</p>
+            )}
           </div>
           <div className="rounded-lg bg-slate-900/70 p-3 text-xs text-slate-300">
             <p>Closes: {niceDate(market.closeAt)}</p>

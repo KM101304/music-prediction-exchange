@@ -59,6 +59,7 @@ async function getSpotifyTrack(trackId) {
     popularity: Number(track.popularity || 0),
     spotifyUrl: track.external_urls?.spotify || null,
     album: track.album?.name || null,
+    imageUrl: Array.isArray(track.album?.images) && track.album.images.length > 0 ? track.album.images[0].url : null,
   };
 }
 

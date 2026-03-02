@@ -11,11 +11,22 @@ const tradeSchema = z.object({
   shares: z.number().positive().max(50000),
 });
 
+function extractSongSnapshot(row) {
+  const payload = row.latest_raw_payload && typeof row.latest_raw_payload === 'object' ? row.latest_raw_payload : null;
+  return {
+    songTitle: payload?.name || null,
+    songArtists: Array.isArray(payload?.artists) ? payload.artists : [],
+    songImageUrl: payload?.imageUrl || null,
+    songUrl: payload?.spotifyUrl || null,
+  };
+}
+
 function mapMarket(row) {
   const qYes = Number(row.shares_yes);
   const qNo = Number(row.shares_no);
   const b = Number(row.lmsr_b);
   const priceYes = lmsrPriceYes(qYes, qNo, b);
+  const songSnapshot = extractSongSnapshot(row);
 
   return {
     id: row.id,
@@ -39,12 +50,27 @@ function mapMarket(row) {
     targetMetricValue: row.target_metric_value ? Number(row.target_metric_value) : null,
     latestSourceValue: row.latest_source_value ? Number(row.latest_source_value) : null,
     latestSourceAt: row.latest_source_at,
+    songTitle: songSnapshot.songTitle,
+    songArtists: songSnapshot.songArtists,
+    songImageUrl: songSnapshot.songImageUrl,
+    songUrl: songSnapshot.songUrl,
   };
 }
 
 router.get('/', async (_req, res, next) => {
   try {
-    const markets = await pool.query('SELECT * FROM markets ORDER BY created_at DESC');
+    const markets = await pool.query(
+      `SELECT m.*, mdp.raw_payload AS latest_raw_payload
+       FROM markets m
+       LEFT JOIN LATERAL (
+         SELECT raw_payload
+         FROM market_data_points
+         WHERE market_id = m.id
+         ORDER BY recorded_at DESC
+         LIMIT 1
+       ) mdp ON TRUE
+       ORDER BY m.created_at DESC`
+    );
     return res.json(markets.rows.map(mapMarket));
   } catch (error) {
     return next(error);
@@ -53,7 +79,19 @@ router.get('/', async (_req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const marketResult = await pool.query('SELECT * FROM markets WHERE id = $1', [req.params.id]);
+    const marketResult = await pool.query(
+      `SELECT m.*, mdp.raw_payload AS latest_raw_payload
+       FROM markets m
+       LEFT JOIN LATERAL (
+         SELECT raw_payload
+         FROM market_data_points
+         WHERE market_id = m.id
+         ORDER BY recorded_at DESC
+         LIMIT 1
+       ) mdp ON TRUE
+       WHERE m.id = $1`,
+      [req.params.id]
+    );
     if (marketResult.rowCount === 0) {
       return res.status(404).json({ error: 'Market not found' });
     }

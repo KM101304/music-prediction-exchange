@@ -5,6 +5,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { AuthWidget } from '../components/AuthWidget';
 import { request } from '../lib/api';
 
+function SongArt({ url, alt, compact = false }) {
+  const size = compact ? 'h-9 w-9' : 'h-16 w-16';
+  if (url) {
+    return (
+      <div className={`${size} shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-900`}>
+        <img src={url} alt={alt} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`${size} shrink-0 rounded-lg border border-slate-700 bg-[linear-gradient(135deg,#0f172a,#1e293b_45%,#047857)] grid place-items-center`}
+    >
+      <span className="text-[9px] uppercase tracking-wide text-slate-200">Track</span>
+    </div>
+  );
+}
+
 function timeLabel(dateStr) {
   const ms = new Date(dateStr).getTime() - Date.now();
   if (!Number.isFinite(ms)) {
@@ -147,9 +165,18 @@ export default function HomePage() {
             {markets.map((market) => (
               <Link key={market.id} href={`/market/${market.id}`} className="card block p-4 hover:border-slate-700">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-base font-medium text-white">{market.title}</h2>
-                    <p className="mt-1 text-xs text-muted">{market.description}</p>
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <SongArt url={market.songImageUrl} alt={market.songTitle || market.title} />
+                    <div className="min-w-0">
+                      <h2 className="text-base font-medium text-white">{market.title}</h2>
+                      {market.songTitle && (
+                        <p className="mt-1 text-xs text-slate-300">
+                          {market.songTitle}
+                          {market.songArtists?.length > 0 ? ` - ${market.songArtists.join(', ')}` : ''}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted">{market.description}</p>
+                    </div>
                   </div>
                   <span className="badge">{market.status}</span>
                 </div>
@@ -181,7 +208,10 @@ export default function HomePage() {
           <div className="mt-3 space-y-3 text-sm">
             {topMovers.map((m) => (
               <Link key={m.id} href={`/market/${m.id}`} className="block rounded-lg bg-slate-900/60 p-3 hover:bg-slate-900">
-                <p className="line-clamp-2 text-xs text-slate-200">{m.title}</p>
+                <div className="flex items-center gap-2">
+                  <SongArt url={m.songImageUrl} alt={m.songTitle || m.title} compact />
+                  <p className="line-clamp-2 text-xs text-slate-200">{m.title}</p>
+                </div>
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <p className="text-emerald-300">YES {(m.probabilityYes * 100).toFixed(2)}%</p>
                   <p className="text-slate-400">{Number(m.volumeShares).toFixed(0)} shares</p>
