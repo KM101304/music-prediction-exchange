@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = '/api';
 let memoryToken = null;
 
 function safeGetLocalStorage() {
@@ -12,18 +12,23 @@ function safeGetLocalStorage() {
   }
 }
 
-export async function request(path, { method = 'GET', token, body } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
+export async function request(path, { method = 'GET', token, body, headers: extraHeaders } = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(extraHeaders || {}) };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
+  } catch (_error) {
+    throw new Error('Network connection failed. Please try again.');
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json') ? await response.json() : null;

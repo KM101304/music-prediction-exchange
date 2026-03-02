@@ -61,19 +61,13 @@ export default function AdminPage() {
         targetMetricValue: createForm.targetMetricValue ? Number(createForm.targetMetricValue) : undefined,
       };
 
-      const result = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/markets`, {
+      const data = await request('/admin/markets', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ADMIN_API_KEY: adminKey,
         },
-        body: JSON.stringify(payload),
+        body: payload,
       });
-
-      const data = await result.json();
-      if (!result.ok) {
-        throw new Error(data.error || 'Failed to create market');
-      }
 
       setMessage(`Market created: ${data.title}`);
       setCreateForm({
@@ -101,17 +95,12 @@ export default function AdminPage() {
     setMessage('');
     setError('');
     try {
-      const result = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/ingest/spotify`, {
+      const data = await request('/admin/ingest/spotify', {
         method: 'POST',
         headers: {
           ADMIN_API_KEY: adminKey,
         },
       });
-
-      const data = await result.json();
-      if (!result.ok) {
-        throw new Error(data.error || 'Failed to ingest Spotify data');
-      }
       setMessage(`Spotify ingest complete: ${data.ingested}/${data.totalCandidates} markets updated`);
       const refreshed = await request('/markets');
       setMarkets(refreshed);
@@ -128,23 +117,17 @@ export default function AdminPage() {
     setMessage('');
     setError('');
     try {
-      const result = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/markets/${settleForm.marketId}/settle`, {
+      const data = await request(`/admin/markets/${settleForm.marketId}/settle`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ADMIN_API_KEY: adminKey,
         },
-        body: JSON.stringify({
+        body: {
           outcome: settleForm.outcome,
           notes: settleForm.notes || undefined,
           sourceUrl: settleForm.sourceUrl || undefined,
-        }),
+        },
       });
-
-      const data = await result.json();
-      if (!result.ok) {
-        throw new Error(data.error || 'Failed to settle market');
-      }
 
       setMessage(`Market #${data.marketId} settled as ${data.outcome}`);
       const refreshed = await request('/markets');

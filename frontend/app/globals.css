@@ -12,6 +12,7 @@ html {
 
 body {
   @apply min-h-screen bg-transparent text-slate-100 antialiased;
+  overflow-x: hidden;
 }
 
 a {
@@ -24,4 +25,17 @@ a {
 
 .badge {
   @apply rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300;
+}
+
+input,
+textarea,
+select,
+button {
+  font-size: 16px;
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
