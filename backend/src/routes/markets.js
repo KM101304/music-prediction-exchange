@@ -24,6 +24,13 @@ const createMarketSchema = z.object({
   targetMetricValue: z.number().positive().optional(),
 });
 
+function parseMarketId(rawId) {
+  if (!/^\d+$/.test(String(rawId || ''))) {
+    return null;
+  }
+  return Number(rawId);
+}
+
 function extractSongSnapshot(row) {
   const payload = row.latest_raw_payload && typeof row.latest_raw_payload === 'object' ? row.latest_raw_payload : null;
   return {
@@ -111,6 +118,11 @@ router.get('/spotify/search', requireAuth, async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const marketId = parseMarketId(req.params.id);
+    if (marketId == null) {
+      return res.status(400).json({ error: 'Invalid market id' });
+    }
+
     const marketResult = await pool.query(
       `SELECT m.*, mdp.raw_payload AS latest_raw_payload
        FROM markets m
@@ -122,7 +134,7 @@ router.get('/:id', async (req, res, next) => {
          LIMIT 1
        ) mdp ON TRUE
        WHERE m.id = $1`,
-      [req.params.id]
+      [marketId]
     );
     if (marketResult.rowCount === 0) {
       return res.status(404).json({ error: 'Market not found' });
@@ -134,7 +146,7 @@ router.get('/:id', async (req, res, next) => {
        WHERE market_id = $1
        ORDER BY created_at ASC
        LIMIT 200`,
-      [req.params.id]
+      [marketId]
     );
 
     const tradePoints = tradesResult.rows.map((trade, idx) => {
@@ -155,7 +167,7 @@ router.get('/:id', async (req, res, next) => {
        WHERE market_id = $1
        ORDER BY recorded_at ASC
        LIMIT 500`,
-      [req.params.id]
+      [marketId]
     );
 
     return res.json({
@@ -178,13 +190,18 @@ router.get('/:id', async (req, res, next) => {
 
 router.get('/:id/data-points', async (req, res, next) => {
   try {
+    const marketId = parseMarketId(req.params.id);
+    if (marketId == null) {
+      return res.status(400).json({ error: 'Invalid market id' });
+    }
+
     const result = await pool.query(
       `SELECT id, source, metric_name, metric_value, raw_payload, recorded_at
        FROM market_data_points
        WHERE market_id = $1
        ORDER BY recorded_at DESC
        LIMIT 500`,
-      [req.params.id]
+      [marketId]
     );
     return res.json(
       result.rows.map((row) => ({
@@ -265,12 +282,17 @@ router.post('/', requireAuth, async (req, res, next) => {
 router.post('/:id/trade', requireAuth, async (req, res, next) => {
   try {
     const payload = tradeSchema.parse(req.body);
+    const marketId = parseMarketId(req.params.id);
+    if (marketId == null) {
+      return res.status(400).json({ error: 'Invalid market id' });
+    }
+
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
 
-      const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE', [req.params.id]);
+      const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE', [marketId]);
       if (marketResult.rowCount === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Market not found' });

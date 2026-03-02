@@ -56,8 +56,8 @@ export default function HomePage() {
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <section className="space-y-5">
+    <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:gap-6">
+      <section className="order-2 space-y-4 lg:order-1 lg:space-y-5">
         <div className="card overflow-hidden p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -154,7 +154,7 @@ export default function HomePage() {
         {!loading && !error && (
           <div className="space-y-3">
             {markets.map((market) => (
-              <Link key={market.id} href={`/market/${market.id}`} className="card block p-4 hover:border-slate-700">
+              <Link key={market.id} prefetch={false} href={`/market/${market.id}`} className="card block p-4 hover:border-slate-700">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <SongCover imageUrl={market.songImageUrl} label={market.songTitle || market.title} />
@@ -188,7 +188,7 @@ export default function HomePage() {
         )}
       </section>
 
-      <aside className="space-y-4">
+      <aside className="order-1 space-y-4 lg:order-2">
         <AuthWidget />
 
         <div className="card p-4">
@@ -198,7 +198,7 @@ export default function HomePage() {
           {!loading && topMovers.length === 0 && <p className="mt-2 text-xs text-muted">No market movement yet.</p>}
           <div className="mt-3 space-y-3 text-sm">
             {topMovers.map((m) => (
-              <Link key={m.id} href={`/market/${m.id}`} className="block rounded-lg bg-slate-900/60 p-3 hover:bg-slate-900">
+              <Link key={m.id} prefetch={false} href={`/market/${m.id}`} className="block rounded-lg bg-slate-900/60 p-3 hover:bg-slate-900">
                 <div className="flex items-center gap-2">
                   <SongCover imageUrl={m.songImageUrl} label={m.songTitle || m.title} compact />
                   <p className="line-clamp-2 text-xs text-slate-200">{m.title}</p>

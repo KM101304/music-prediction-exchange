@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ProbabilityChart } from '../../../components/ProbabilityChart';
 import { SongCover } from '../../../components/SongCover';
 import { SourceMetricChart } from '../../../components/SourceMetricChart';
@@ -14,6 +15,7 @@ function niceDate(value) {
 }
 
 export default function MarketDetailPage({ params }) {
+  const routeParams = useParams();
   const [market, setMarket] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
   const [side, setSide] = useState('YES');
@@ -23,12 +25,19 @@ export default function MarketDetailPage({ params }) {
   const [error, setError] = useState('');
   const [tradeMessage, setTradeMessage] = useState('');
 
-  const marketId = params.id;
+  const marketId = routeParams?.id || params?.id || null;
+  const hasValidMarketId = /^\d+$/.test(String(marketId || ''));
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      if (!hasValidMarketId) {
+        setError('Invalid market id');
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError('');
       try {
@@ -59,7 +68,7 @@ export default function MarketDetailPage({ params }) {
     return () => {
       cancelled = true;
     };
-  }, [marketId]);
+  }, [marketId, hasValidMarketId]);
 
   const myPosition = useMemo(() => {
     if (!portfolio) {
@@ -70,6 +79,10 @@ export default function MarketDetailPage({ params }) {
 
   async function onTrade(event) {
     event.preventDefault();
+    if (!hasValidMarketId) {
+      setError('Invalid market id');
+      return;
+    }
     setTradeLoading(true);
     setTradeMessage('');
     setError('');
