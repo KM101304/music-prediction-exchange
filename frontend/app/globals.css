@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: radial-gradient(circle at 20% 0%, #15243b 0%, #0b111b 44%, #070b12 100%);
+}
+
+body {
+  @apply min-h-screen bg-transparent text-slate-100 antialiased;
+}
+
+a {
+  @apply transition-colors;
+}
+
+.card {
+  @apply rounded-xl border border-slate-800 bg-panel shadow-lg shadow-black/20;
+}
+
+.badge {
+  @apply rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300;
+}

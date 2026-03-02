@@ -1,78 +1,70 @@
-# Build Checklist (Best Implementation Order)
+# TASKS
 
-1. Initialize repository structure and shared conventions
-   - Confirm `frontend/` (Next.js + Tailwind) and `backend/` (Express) app skeletons.
-   - Add root docs for environment variables, scripts, and local setup.
+1. Repository + environment
+   - Create `backend/`, `frontend/`, `docs/` structure.
+   - Add `.env` templates for backend and frontend.
 
-2. Define product constants and policy guardrails
-   - Add shared constants for "play money points" naming.
-   - Add explicit policy flags: no deposits, no withdrawals, no wallet integrations.
+2. Database schema and migrations
+   - Add migrations for `users`, `wallets`, `markets`, `trades`, `positions`, `ledger`, `settlements`, `admin_actions`, `audit_logs`.
+   - Add migration runner and verify fresh DB bootstraps cleanly.
 
-3. Provision Postgres and baseline schema
-   - Create initial migrations for `users`, `accounts`, `markets`, `positions`, `ledger_entries`, `settlements`.
-   - Add indexes and foreign keys for market/user lookups.
+3. Backend foundation
+   - Configure Express app with security headers, CORS, JSON parsing, and global error handling.
+   - Add Postgres pool + graceful shutdown.
 
-4. Implement backend app foundation (Express)
-   - Add config loading, error handler, request validation, logging, health endpoint.
-   - Set up DB access layer and migration runner.
+4. Authentication and credits bootstrap
+   - Implement `POST /auth/register` and `POST /auth/login` with JWT.
+   - Grant 10,000 signup credits and ledger entry atomically.
 
-5. Implement auth and authorization
-   - Build register/login/me endpoints.
-   - Hash passwords securely.
-   - Issue/verify JWTs.
-   - Add role middleware for `USER`/`ADMIN`.
+5. LMSR trading engine
+   - Implement binary quote and execute functions.
+   - Add epsilon bounds so probabilities never equal exactly 0 or 1.
+   - Write and run unit tests.
 
-6. Implement account + ledger core
-   - Create starting points grant on user registration.
-   - Add append-only ledger service and balance calculation utilities.
-   - Enforce transactional DB writes for balance-changing operations.
+6. Market and trade APIs
+   - Implement `GET /markets`, `GET /markets/:id`.
+   - Implement `POST /markets/:id/trade` with row locks and transaction-safe balance checks.
 
-7. Implement market management APIs
-   - Admin create/update/list/detail markets.
-   - Market status transitions (`OPEN` -> `CLOSED` -> `SETTLED`).
-   - Validate `close_at`, `settle_by`, and resolution criteria presence.
+7. User portfolio APIs
+   - Implement `GET /me/portfolio` and `GET /me/transactions`.
+   - Implement `GET /leaderboard`.
 
-8. Implement position placement logic
-   - User places YES/NO position with points stake.
-   - Validate market open state and sufficient points.
-   - Write position + ledger debit atomically.
+8. Admin workflows
+   - Protect admin routes with `ADMIN_API_KEY`.
+   - Implement `POST /admin/markets` and `POST /admin/markets/:id/settle`.
+   - Ensure settlement writes wallet + ledger updates in one transaction.
 
-9. Implement manual settlement engine
-   - Admin settle with `YES`/`NO`/`CANCELLED`.
-   - Compute payouts/refunds via deterministic formula.
-   - Write settlement records and ledger credits atomically.
+9. Seed data
+   - Add seed script for demo admin and 5 open demo markets.
+   - Confirm demo markets show up in `GET /markets`.
 
-10. Implement portfolio and activity APIs
-    - `GET /me/portfolio` for balances + open/settled positions summary.
-    - `GET /me/ledger` for chronological transaction history.
+10. Frontend scaffold
+    - Build Next.js + Tailwind + Recharts app.
+    - Add responsive dark-first UI and route navigation.
 
-11. Build frontend auth flows (Next.js)
-    - Pages/forms for register/login/logout.
-    - JWT storage strategy and authenticated route guards.
+11. Frontend pages
+    - `/` market list + top movers + auth widget.
+    - `/market/[id]` chart, probability, buy module, user position.
+    - `/portfolio` positions + transactions.
+    - `/leaderboard` ranking.
+    - `/admin` create + settle market using locally stored admin key.
 
-12. Build frontend market experiences
-    - Market list page with status filtering.
-    - Market detail page with YES/NO position form and rule visibility.
+12. Integration and resilience
+    - Add clear loading and error states on all pages.
+    - Verify cross-origin backend access from `NEXT_PUBLIC_API_URL`.
 
-13. Build frontend portfolio/activity views
-    - Points balance, open positions, settled outcomes.
-    - Ledger timeline with credits/debits and settlement references.
+13. Documentation and deployment notes
+    - Backend README with run, migrate, seed steps.
+    - Frontend README with local run and Vercel notes.
+    - Deployment guidance for Render/Railway backend.
 
-14. Build admin frontend console
-    - Market creation/edit form.
-    - Settlement workflow page with outcome selection and notes/source URL.
-
-15. Add cross-cutting safeguards and observability
-    - Rate limit auth endpoints.
-    - Audit log admin actions.
-    - Add structured logs and basic operational metrics.
-
-16. Add tests in risk order
-    - Unit tests: payout logic, ledger math, auth helpers.
-    - Integration tests: auth, position placement, settlement atomicity.
-    - E2E smoke tests: register -> place position -> settle -> verify portfolio.
-
-17. Hardening and launch readiness
-    - Validate no real-money/withdrawal/wallet paths exist in API or UI.
-    - Add clear play-money disclaimer in UI footer and onboarding.
-    - Final QA pass on edge cases (late positions, duplicate settlement, cancelled markets).
+14. Launch checklist
+    - [ ] Production Postgres provisioned and backed up.
+    - [ ] Backend env vars set (`DATABASE_URL`, `JWT_SECRET`, `ADMIN_API_KEY`, `CORS_ORIGIN`).
+    - [ ] Frontend env var set (`NEXT_PUBLIC_API_URL`).
+    - [ ] Migrations run in target environment.
+    - [ ] Seed script run only for non-production demo environments.
+    - [ ] Health check endpoint monitored.
+    - [ ] Admin API key rotated from default value.
+    - [ ] Manual settlement tested end-to-end in staging.
+    - [ ] Explicit play-money/no-withdrawal disclaimer visible in UI.

@@ -1,52 +1,88 @@
-# Backend (Node.js + Express + Postgres)
+# Backend API
 
-Play-money API for the Music Prediction Exchange.
+Production-oriented MVP backend for a play-money Music Prediction Exchange.
 
-## Features in this scaffold
-- JWT auth (`POST /auth/register`, `POST /auth/login`, `GET /auth/me`)
-- Markets read endpoints (`GET /markets`, `GET /markets/:id`)
-- LMSR-based trading (`POST /markets/:id/trade`) with transactional negative-balance prevention
-- Portfolio + transaction history (`GET /me/portfolio`, `GET /me/transactions`)
-- Leaderboard (`GET /leaderboard`)
-- Admin API key protected endpoints:
+## Stack
+- Node.js + Express
+- Postgres
+- JWT auth
+- LMSR binary market maker
+
+## Features
+- Auth: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
+- Markets: `GET /markets`, `GET /markets/:id`, `POST /markets/:id/trade`
+- User: `GET /me/portfolio`, `GET /me/transactions`
+- Public ranking: `GET /leaderboard`
+- Admin key routes:
   - `POST /admin/markets`
   - `POST /admin/markets/:id/settle`
-- SQL migrations for users, wallets, markets, trades, positions, ledger, settlements, admin_actions
+  - `POST /admin/ingest/spotify`
+- Full ledger tracking for all credit changes
+- Audit log table for request traces
+- Seed script with demo admin + 5 markets
+- Spotify data ingestion for source snapshots (`market_data_points`)
 
-## Setup
+## Schema
+Migrations create:
+- `users`
+- `wallets`
+- `markets`
+- `trades`
+- `positions`
+- `ledger`
+- `settlements`
+- `admin_actions`
+- `audit_logs`
+- `market_data_points`
+
+## Local setup
 1. Copy env file:
-   - `cp env.example .env` (or PowerShell: `Copy-Item env.example .env`)
-2. Update `.env` values (`DATABASE_URL`, `JWT_SECRET`, `ADMIN_API_KEY`).
-3. Install dependencies:
+   - PowerShell: `Copy-Item env.example .env`
+2. Edit `.env` values (`DATABASE_URL`, `JWT_SECRET`, `ADMIN_API_KEY`).
+3. Optional for Spotify ingestion:
+   - `SPOTIFY_CLIENT_ID`
+   - `SPOTIFY_CLIENT_SECRET`
+4. Install packages:
    - `npm install`
-4. Run migrations:
+5. Run migrations:
    - `npm run migrate`
-5. Start dev server:
+6. Seed demo data:
+   - `npm run seed`
+7. Start dev server:
    - `npm run dev`
 
-Default server URL: `http://localhost:4000`
+Backend default URL: `http://localhost:4000`
 
 ## Scripts
-- `npm run dev` - Run server with nodemon
-- `npm run test` - Run unit tests (includes LMSR tests)
-- `npm run lint` - Lint JavaScript files
-- `npm run migrate` - Apply SQL migrations
+- `npm run dev` - Start with nodemon
+- `npm run start` - Start without watcher
+- `npm run test` - Node test runner (LMSR unit tests)
+- `npm run lint` - ESLint
+- `npm run migrate` - Run SQL migrations
+- `npm run seed` - Insert demo admin and 5 open markets
+- `npm run ingest:spotify` - Pull Spotify snapshots for eligible markets
 
-## API Notes
-- Register grants `10,000` starting credits by default (`DEFAULT_STARTING_CREDITS`).
-- Trading payload:
-  ```json
-  {
-    "side": "YES",
-    "shares": 25
-  }
-  ```
-- Admin routes require `ADMIN_API_KEY` header.
+## Trading model
+- LMSR for binary YES/NO outcomes.
+- `quoteBinaryTrade` computes deterministic cost and post-trade probabilities.
+- `executeBinaryTrade` returns quote plus average execution price.
+- Probabilities are clamped by epsilon bounds to avoid exact `0` and `1`.
 
-## Settlement behavior
-- `YES` / `NO`: winning positions are paid `1 credit` per winning share.
-- `CANCELLED`: users are refunded total `cost_credits` spent in that market.
+## Settlement rules
+- `YES` or `NO`: each winning share pays `1` credit.
+- `CANCELLED`: users receive refunds equal to summed trade costs in that market.
+- All settlement writes happen in one DB transaction.
 
-## Development assumptions
-- Numeric values use Postgres `NUMERIC` and are converted to JS numbers in responses.
-- This scaffold is intentionally minimal and should be extended with stricter validation, rate limiting, and comprehensive integration tests before production use.
+## Spotify ingestion notes
+- Source type `SPOTIFY_TRACK_POPULARITY` stores track popularity snapshots from Spotify Web API.
+- Spotify Web API does not expose track stream counts directly. Popularity is a proxy metric (0-100), not canonical streams.
+- Add `spotifyTrackId` when creating a market to enable automated snapshots.
+
+## Deployment notes (Render/Railway)
+- Use managed Postgres and set `DATABASE_URL`.
+- Set `JWT_SECRET` and `ADMIN_API_KEY` as secure env vars.
+- Build/start command:
+  - Build: `npm install`
+  - Start: `npm run start`
+- Run `npm run migrate` before first release and on schema changes.
+- Run `npm run seed` in non-production environments only.

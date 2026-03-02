@@ -3,17 +3,22 @@ const { z } = require('zod');
 const { pool } = require('../db/pool');
 const { requireAdminApiKey } = require('../middleware/adminKey');
 const { config } = require('../config');
+const { ingestSpotifyData } = require('../jobs/ingestSpotifyData');
+const { hasSpotifyCreds } = require('../lib/spotify');
 
 const router = express.Router();
 router.use(requireAdminApiKey);
 
 const createMarketSchema = z.object({
   title: z.string().min(5).max(200),
-  description: z.string().min(10),
-  resolutionCriteria: z.string().min(10),
+  description: z.string().min(10).max(5000),
+  resolutionCriteria: z.string().min(10).max(5000),
   closeAt: z.string().datetime(),
   settleBy: z.string().datetime(),
-  lmsrB: z.number().positive().optional(),
+  lmsrB: z.number().positive().max(100000).optional(),
+  sourceType: z.enum(['MANUAL', 'SPOTIFY_TRACK_POPULARITY']).default('MANUAL'),
+  spotifyTrackId: z.string().min(5).max(100).optional(),
+  targetMetricValue: z.number().positive().optional(),
 });
 
 const settleSchema = z.object({
@@ -25,24 +30,35 @@ const settleSchema = z.object({
 router.post('/markets', async (req, res, next) => {
   try {
     const payload = createMarketSchema.parse(req.body);
-
     const closeAt = new Date(payload.closeAt);
     const settleBy = new Date(payload.settleBy);
+
+    if (Number.isNaN(closeAt.getTime()) || Number.isNaN(settleBy.getTime())) {
+      return res.status(400).json({ error: 'Invalid closeAt/settleBy date' });
+    }
     if (settleBy <= closeAt) {
       return res.status(400).json({ error: 'settleBy must be after closeAt' });
     }
 
-    const result = await pool.query(
+    if (payload.sourceType === 'SPOTIFY_TRACK_POPULARITY' && !payload.spotifyTrackId) {
+      return res.status(400).json({ error: 'spotifyTrackId is required for SPOTIFY_TRACK_POPULARITY markets' });
+    }
+
+    const marketResult = await pool.query(
       `INSERT INTO markets (
-        title,
-        description,
-        resolution_criteria,
-        close_at,
-        settle_by,
-        lmsr_b,
-        status
-      ) VALUES ($1,$2,$3,$4,$5,$6,'OPEN')
-      RETURNING *`,
+         title,
+         description,
+         resolution_criteria,
+         close_at,
+         settle_by,
+         status,
+         lmsr_b,
+         source_type,
+         spotify_track_id,
+         target_metric_value
+       )
+       VALUES ($1,$2,$3,$4,$5,'OPEN',$6,$7,$8,$9)
+       RETURNING *`,
       [
         payload.title,
         payload.description,
@@ -50,15 +66,17 @@ router.post('/markets', async (req, res, next) => {
         closeAt,
         settleBy,
         payload.lmsrB ?? config.defaultLmsrB,
+        payload.sourceType,
+        payload.spotifyTrackId ?? null,
+        payload.targetMetricValue ?? null,
       ]
     );
 
-    const market = result.rows[0];
-
+    const market = marketResult.rows[0];
     await pool.query(
       `INSERT INTO admin_actions (action_type, market_id, metadata)
-       VALUES ('CREATE_MARKET', $1, $2)`,
-      [market.id, JSON.stringify({ title: market.title })]
+       VALUES ('CREATE_MARKET', $1, $2::jsonb)`,
+      [market.id, JSON.stringify({ title: market.title, closeAt: market.close_at, settleBy: market.settle_by })]
     );
 
     return res.status(201).json({
@@ -72,6 +90,9 @@ router.post('/markets', async (req, res, next) => {
       lmsrB: Number(market.lmsr_b),
       sharesYes: Number(market.shares_yes),
       sharesNo: Number(market.shares_no),
+      sourceType: market.source_type,
+      spotifyTrackId: market.spotify_track_id,
+      targetMetricValue: market.target_metric_value ? Number(market.target_metric_value) : null,
     });
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -81,19 +102,34 @@ router.post('/markets', async (req, res, next) => {
   }
 });
 
+router.post('/ingest/spotify', async (_req, res, next) => {
+  try {
+    if (!hasSpotifyCreds()) {
+      return res.status(400).json({ error: 'Spotify credentials are not configured on backend' });
+    }
+    const result = await ingestSpotifyData();
+    await pool.query(
+      `INSERT INTO admin_actions (action_type, market_id, metadata)
+       VALUES ('INGEST_SPOTIFY', NULL, $1::jsonb)`,
+      [JSON.stringify(result)]
+    );
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post('/markets/:id/settle', async (req, res, next) => {
   try {
     const payload = settleSchema.parse(req.body);
-
     const client = await pool.connect();
+
     try {
       await client.query('BEGIN');
 
-      const marketResult = await client.query(
-        'SELECT * FROM markets WHERE id = $1 FOR UPDATE',
-        [req.params.id]
-      );
-
+      const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE', [
+        req.params.id,
+      ]);
       if (marketResult.rowCount === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Market not found' });
@@ -114,14 +150,17 @@ router.post('/markets/:id/settle', async (req, res, next) => {
 
       await client.query(
         `INSERT INTO settlements (market_id, outcome, notes, source_url)
-         VALUES ($1,$2,$3,$4)`,
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (market_id)
+         DO UPDATE SET outcome = EXCLUDED.outcome, notes = EXCLUDED.notes, source_url = EXCLUDED.source_url`,
         [market.id, payload.outcome, payload.notes ?? null, payload.sourceUrl ?? null]
       );
 
       let payoutsIssued = 0;
+      let totalCredits = 0;
 
       if (payload.outcome === 'CANCELLED') {
-        const refundRows = await client.query(
+        const refunds = await client.query(
           `SELECT user_id, COALESCE(SUM(cost_credits), 0) AS refund
            FROM trades
            WHERE market_id = $1
@@ -129,12 +168,11 @@ router.post('/markets/:id/settle', async (req, res, next) => {
           [market.id]
         );
 
-        for (const row of refundRows.rows) {
+        for (const row of refunds.rows) {
           const refund = Number(row.refund);
           if (refund <= 0) {
             continue;
           }
-
           const walletResult = await client.query(
             'SELECT credits_balance FROM wallets WHERE user_id = $1 FOR UPDATE',
             [row.user_id]
@@ -151,16 +189,12 @@ router.post('/markets/:id/settle', async (req, res, next) => {
 
           await client.query(
             `INSERT INTO ledger (user_id, market_id, entry_type, amount_credits, balance_after, metadata)
-             VALUES ($1,$2,'SETTLEMENT_REFUND',$3,$4,$5)`,
-            [
-              row.user_id,
-              market.id,
-              refund,
-              balanceAfter,
-              JSON.stringify({ outcome: payload.outcome }),
-            ]
+             VALUES ($1,$2,'SETTLEMENT_REFUND',$3,$4,$5::jsonb)`,
+            [row.user_id, market.id, refund, balanceAfter, JSON.stringify({ outcome: payload.outcome })]
           );
+
           payoutsIssued += 1;
+          totalCredits += refund;
         }
       } else {
         const winners = await client.query(
@@ -193,34 +227,31 @@ router.post('/markets/:id/settle', async (req, res, next) => {
 
           await client.query(
             `INSERT INTO ledger (user_id, market_id, entry_type, amount_credits, balance_after, metadata)
-             VALUES ($1,$2,'SETTLEMENT_PAYOUT',$3,$4,$5)`,
-            [
-              row.user_id,
-              market.id,
-              payout,
-              balanceAfter,
-              JSON.stringify({ outcome: payload.outcome }),
-            ]
+             VALUES ($1,$2,'SETTLEMENT_PAYOUT',$3,$4,$5::jsonb)`,
+            [row.user_id, market.id, payout, balanceAfter, JSON.stringify({ outcome: payload.outcome })]
           );
+
           payoutsIssued += 1;
+          totalCredits += payout;
         }
       }
 
       await client.query(
         `INSERT INTO admin_actions (action_type, market_id, metadata)
-         VALUES ('SETTLE_MARKET', $1, $2)`,
+         VALUES ('SETTLE_MARKET', $1, $2::jsonb)`,
         [
           market.id,
           JSON.stringify({
             outcome: payload.outcome,
             payoutsIssued,
+            totalCredits,
             sourceUrl: payload.sourceUrl ?? null,
           }),
         ]
       );
 
       await client.query('COMMIT');
-      return res.json({ marketId: market.id, outcome: payload.outcome, payoutsIssued });
+      return res.json({ marketId: market.id, outcome: payload.outcome, payoutsIssued, totalCredits });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

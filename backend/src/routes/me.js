@@ -7,10 +7,9 @@ const router = express.Router();
 
 router.get('/portfolio', requireAuth, async (req, res, next) => {
   try {
-    const walletResult = await pool.query(
-      'SELECT credits_balance FROM wallets WHERE user_id = $1',
-      [req.user.userId]
-    );
+    const walletResult = await pool.query('SELECT credits_balance FROM wallets WHERE user_id = $1', [
+      req.user.userId,
+    ]);
 
     const positionsResult = await pool.query(
       `SELECT p.market_id, p.side, p.shares, m.title, m.status, m.outcome, m.shares_yes, m.shares_no, m.lmsr_b
@@ -25,18 +24,18 @@ router.get('/portfolio', requireAuth, async (req, res, next) => {
       const qYes = Number(row.shares_yes);
       const qNo = Number(row.shares_no);
       const b = Number(row.lmsr_b);
-      const priceYes = lmsrPriceYes(qYes, qNo, b);
-      const currentPrice = row.side === 'YES' ? priceYes : 1 - priceYes;
+      const yesProbability = lmsrPriceYes(qYes, qNo, b);
+      const markPrice = row.side === 'YES' ? yesProbability : 1 - yesProbability;
 
       return {
         marketId: row.market_id,
         marketTitle: row.title,
         marketStatus: row.status,
-        outcome: row.outcome,
+        marketOutcome: row.outcome,
         side: row.side,
         shares: Number(row.shares),
-        markPrice: currentPrice,
-        markValue: Number((Number(row.shares) * currentPrice).toFixed(6)),
+        markPrice,
+        markValue: Number((Number(row.shares) * markPrice).toFixed(6)),
       };
     });
 
@@ -57,7 +56,7 @@ router.get('/transactions', requireAuth, async (req, res, next) => {
        FROM ledger
        WHERE user_id = $1
        ORDER BY created_at DESC
-       LIMIT 200`,
+       LIMIT 300`,
       [req.user.userId]
     );
 

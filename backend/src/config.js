@@ -23,6 +23,8 @@ const config = {
   defaultLmsrB: Number(process.env.DEFAULT_LMSR_B || 100),
   demoAdminEmail: process.env.DEMO_ADMIN_EMAIL || 'admin@musicx.local',
   demoAdminPassword: process.env.DEMO_ADMIN_PASSWORD || 'ChangeMe123!',
+  spotifyClientId: process.env.SPOTIFY_CLIENT_ID || '',
+  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
 };
 
 module.exports = { config };

@@ -34,6 +34,11 @@ function mapMarket(row) {
     probabilityNo: 1 - priceYes,
     createdAt: row.created_at,
     settledAt: row.settled_at,
+    sourceType: row.source_type,
+    spotifyTrackId: row.spotify_track_id,
+    targetMetricValue: row.target_metric_value ? Number(row.target_metric_value) : null,
+    latestSourceValue: row.latest_source_value ? Number(row.latest_source_value) : null,
+    latestSourceAt: row.latest_source_at,
   };
 }
 
@@ -74,10 +79,53 @@ router.get('/:id', async (req, res, next) => {
       };
     });
 
+    const dataPointsResult = await pool.query(
+      `SELECT id, source, metric_name, metric_value, raw_payload, recorded_at
+       FROM market_data_points
+       WHERE market_id = $1
+       ORDER BY recorded_at ASC
+       LIMIT 500`,
+      [req.params.id]
+    );
+
     return res.json({
       ...mapMarket(marketResult.rows[0]),
       tradeHistory: tradePoints,
+      sourceDataPoints: dataPointsResult.rows.map((row, idx) => ({
+        index: idx + 1,
+        id: row.id,
+        source: row.source,
+        metricName: row.metric_name,
+        metricValue: Number(row.metric_value),
+        recordedAt: row.recorded_at,
+        rawPayload: row.raw_payload,
+      })),
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/:id/data-points', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, source, metric_name, metric_value, raw_payload, recorded_at
+       FROM market_data_points
+       WHERE market_id = $1
+       ORDER BY recorded_at DESC
+       LIMIT 500`,
+      [req.params.id]
+    );
+    return res.json(
+      result.rows.map((row) => ({
+        id: row.id,
+        source: row.source,
+        metricName: row.metric_name,
+        metricValue: Number(row.metric_value),
+        recordedAt: row.recorded_at,
+        rawPayload: row.raw_payload,
+      }))
+    );
   } catch (error) {
     return next(error);
   }

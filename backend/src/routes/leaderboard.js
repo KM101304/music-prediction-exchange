@@ -9,13 +9,13 @@ router.get('/', async (_req, res, next) => {
       `SELECT u.id, u.display_name, w.credits_balance
        FROM users u
        JOIN wallets w ON w.user_id = u.id
-       ORDER BY w.credits_balance DESC, u.id ASC
+       ORDER BY w.credits_balance DESC, u.created_at ASC
        LIMIT 100`
     );
 
     return res.json(
-      result.rows.map((row, index) => ({
-        rank: index + 1,
+      result.rows.map((row, idx) => ({
+        rank: idx + 1,
         userId: row.id,
         displayName: row.display_name,
         creditsBalance: Number(row.credits_balance),
