@@ -1,5 +1,6 @@
-const DIRECT_API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
-const API_URL = DIRECT_API_URL || '/api';
+const DEFAULT_BACKEND_URL = 'https://music-prediction-exchange-production.up.railway.app';
+const DIRECT_API_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, '');
+const API_URL = DIRECT_API_URL;
 let memoryToken = null;
 
 function safeGetLocalStorage() {
@@ -57,6 +58,9 @@ export async function request(path, { method = 'GET', token, body, headers: extr
   const data = contentType.includes('application/json') ? await response.json() : null;
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error('Access blocked by host security layer. Refresh once or try again in a few seconds.');
+    }
     const message = data?.error || `Request failed (${response.status})`;
     throw new Error(message);
   }

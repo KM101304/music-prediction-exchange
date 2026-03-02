@@ -12,7 +12,7 @@ const navItems = [
 export function NavBar() {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 [padding-top:max(0px,env(safe-area-inset-top))]">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="group flex min-w-0 items-center gap-2 text-sm sm:gap-3">
           <LogoMark className="h-8 w-8 shrink-0" />
           <div className="min-w-0">
