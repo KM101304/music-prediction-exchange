@@ -12,9 +12,19 @@ async function proxy(request, context) {
   const query = url.search || '';
   const target = `${getApiOrigin()}/${path}${query}`;
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.delete('host');
-  requestHeaders.delete('content-length');
+  const requestHeaders = new Headers();
+  const contentType = request.headers.get('content-type');
+  const authorization = request.headers.get('authorization');
+  const accept = request.headers.get('accept');
+  if (contentType) {
+    requestHeaders.set('content-type', contentType);
+  }
+  if (authorization) {
+    requestHeaders.set('authorization', authorization);
+  }
+  if (accept) {
+    requestHeaders.set('accept', accept);
+  }
 
   const init = {
     method: request.method,
@@ -23,7 +33,7 @@ async function proxy(request, context) {
   };
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    init.body = await request.arrayBuffer();
+    init.body = await request.text();
   }
 
   let upstream;
