@@ -13,6 +13,7 @@ Production-oriented MVP backend for a play-money Music Prediction Exchange.
 - Markets: `GET /markets`, `GET /markets/:id`, `POST /markets/:id/trade`
 - User: `GET /me/portfolio`, `GET /me/transactions`
 - Public ranking: `GET /leaderboard`
+- Public analytics: `GET /stats/public`
 - Admin key routes:
   - `POST /admin/markets`
   - `POST /admin/markets/:id/settle`

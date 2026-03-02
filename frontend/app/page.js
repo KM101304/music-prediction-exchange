@@ -19,13 +19,25 @@ function timeLabel(dateStr) {
 
 export default function HomePage() {
   const [markets, setMarkets] = useState([]);
+  const [usageStats, setUsageStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    request('/markets')
-      .then((data) => setMarkets(data))
-      .catch((err) => setError(err.message))
+    Promise.allSettled([request('/markets'), request('/stats/public')])
+      .then((results) => {
+        const [marketsResult, statsResult] = results;
+
+        if (marketsResult.status === 'fulfilled') {
+          setMarkets(marketsResult.value);
+        } else {
+          setError(marketsResult.reason.message);
+        }
+
+        if (statsResult.status === 'fulfilled') {
+          setUsageStats(statsResult.value);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -33,13 +45,6 @@ export default function HomePage() {
     () => [...markets].sort((a, b) => Math.abs(b.probabilityYes - 0.5) - Math.abs(a.probabilityYes - 0.5)).slice(0, 4),
     [markets]
   );
-
-  const stats = useMemo(() => {
-    const open = markets.filter((m) => m.status === 'OPEN').length;
-    const totalVolume = markets.reduce((sum, m) => sum + Number(m.volumeShares || 0), 0);
-    const avgYes = markets.length ? markets.reduce((sum, m) => sum + Number(m.probabilityYes || 0), 0) / markets.length : 0;
-    return { open, totalVolume, avgYes };
-  }, [markets]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -55,24 +60,84 @@ export default function HomePage() {
             </div>
             <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
               <div className="rounded-lg bg-slate-900/70 p-3">
-                <p className="text-slate-400">Open markets</p>
-                <p className="mt-1 text-lg font-semibold text-white">{stats.open}</p>
+                <p className="text-slate-400">Total users</p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {usageStats ? Number(usageStats.total_users).toLocaleString() : '-'}
+                </p>
               </div>
               <div className="rounded-lg bg-slate-900/70 p-3">
-                <p className="text-slate-400">Total shares</p>
-                <p className="mt-1 text-lg font-semibold text-white">{stats.totalVolume.toFixed(0)}</p>
+                <p className="text-slate-400">Active traders (24h)</p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {usageStats ? Number(usageStats.active_traders_24h).toLocaleString() : '-'}
+                </p>
               </div>
               <div className="rounded-lg bg-slate-900/70 p-3">
-                <p className="text-slate-400">Avg YES</p>
-                <p className="mt-1 text-lg font-semibold text-white">{(stats.avgYes * 100).toFixed(1)}%</p>
+                <p className="text-slate-400">Total trades</p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {usageStats ? Number(usageStats.total_trades).toLocaleString() : '-'}
+                </p>
               </div>
               <div className="rounded-lg bg-slate-900/70 p-3">
-                <p className="text-slate-400">Settlement mode</p>
-                <p className="mt-1 text-lg font-semibold text-white">Manual</p>
+                <p className="text-slate-400">Trades (24h)</p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {usageStats ? Number(usageStats.trades_24h).toLocaleString() : '-'}
+                </p>
               </div>
             </div>
           </div>
         </div>
+
+        {usageStats && (
+          <div className="card p-4">
+            <h2 className="text-sm font-semibold">Live Platform Activity</h2>
+            <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-4">
+              <div className="rounded bg-slate-900/60 p-2">
+                <p className="text-slate-400">Open markets</p>
+                <p className="mt-1 text-base font-semibold text-white">{Number(usageStats.open_markets)}</p>
+              </div>
+              <div className="rounded bg-slate-900/60 p-2">
+                <p className="text-slate-400">Settled markets</p>
+                <p className="mt-1 text-base font-semibold text-white">{Number(usageStats.settled_markets)}</p>
+              </div>
+              <div className="rounded bg-slate-900/60 p-2">
+                <p className="text-slate-400">New users (24h)</p>
+                <p className="mt-1 text-base font-semibold text-white">{Number(usageStats.new_users_24h)}</p>
+              </div>
+              <div className="rounded bg-slate-900/60 p-2">
+                <p className="text-slate-400">Total shares traded</p>
+                <p className="mt-1 text-base font-semibold text-white">{Number(usageStats.total_shares).toFixed(1)}</p>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+              <div className="rounded bg-slate-900/50 p-2">
+                <p className="mb-2 text-slate-400">Signups (last 14 days)</p>
+                <div className="flex items-end gap-1">
+                  {usageStats.signup_trend.map((row) => (
+                    <div
+                      key={row.day}
+                      title={`${row.day}: ${row.value}`}
+                      className="w-3 rounded-t bg-emerald-400/80"
+                      style={{ height: `${Math.max(6, row.value * 14)}px` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="rounded bg-slate-900/50 p-2">
+                <p className="mb-2 text-slate-400">Trades (last 14 days)</p>
+                <div className="flex items-end gap-1">
+                  {usageStats.trade_trend.map((row) => (
+                    <div
+                      key={row.day}
+                      title={`${row.day}: ${row.trades}`}
+                      className="w-3 rounded-t bg-sky-400/80"
+                      style={{ height: `${Math.max(6, row.trades * 12)}px` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && <p className="card p-4 text-sm text-muted">Loading markets...</p>}
         {error && <p className="card border-rose-500/40 bg-rose-900/20 p-4 text-sm text-rose-200">{error}</p>}

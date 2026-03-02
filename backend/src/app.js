@@ -7,6 +7,7 @@ const marketsRoutes = require('./routes/markets');
 const meRoutes = require('./routes/me');
 const leaderboardRoutes = require('./routes/leaderboard');
 const adminRoutes = require('./routes/admin');
+const statsRoutes = require('./routes/stats');
 const { auditLogger } = require('./middleware/audit');
 const { notFound, errorHandler } = require('./middleware/error');
 
@@ -20,6 +21,9 @@ app.use(
         return callback(null, true);
       }
       if (config.corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      if (config.allowVercelAppOrigins && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
         return callback(null, true);
       }
       return callback(new Error('Origin not allowed by CORS'));
@@ -38,6 +42,7 @@ app.use('/auth', authRoutes);
 app.use('/markets', marketsRoutes);
 app.use('/me', meRoutes);
 app.use('/leaderboard', leaderboardRoutes);
+app.use('/stats', statsRoutes);
 app.use('/admin', adminRoutes);
 
 app.use(notFound);

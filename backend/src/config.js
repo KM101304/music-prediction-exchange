@@ -23,6 +23,7 @@ const config = {
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean),
+  allowVercelAppOrigins: (process.env.CORS_ALLOW_VERCEL_APP_ORIGINS || 'true').toLowerCase() === 'true',
   startingCredits: Number(process.env.DEFAULT_STARTING_CREDITS || 10000),
   defaultLmsrB: Number(process.env.DEFAULT_LMSR_B || 100),
   demoAdminEmail: process.env.DEMO_ADMIN_EMAIL || 'admin@musicx.local',

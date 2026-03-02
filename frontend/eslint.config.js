@@ -2,8 +2,10 @@ const globals = require('globals');
 
 module.exports = [
   {
+    ignores: ['.next/**', 'node_modules/**'],
+  },
+  {
     files: ['**/*.{js,jsx}'],
-    ignores: ['node_modules/**', '.next/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
