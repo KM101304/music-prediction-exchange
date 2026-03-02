@@ -87,6 +87,10 @@ export function AuthWidget() {
         <input
           required
           type="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck="false"
+          inputMode="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
@@ -104,6 +108,9 @@ export function AuthWidget() {
         <input
           required
           type="password"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck="false"
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}

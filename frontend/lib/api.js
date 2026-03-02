@@ -1,4 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+let memoryToken = null;
+
+function safeGetLocalStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return window.localStorage;
+  } catch (_error) {
+    return null;
+  }
+}
 
 export async function request(path, { method = 'GET', token, body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -25,20 +37,31 @@ export async function request(path, { method = 'GET', token, body } = {}) {
 }
 
 export function getStoredToken() {
-  if (typeof window === 'undefined') {
-    return null;
+  const storage = safeGetLocalStorage();
+  if (!storage) {
+    return memoryToken;
   }
-  return localStorage.getItem('mpx_token');
+  try {
+    return storage.getItem('mpx_token') || memoryToken;
+  } catch (_error) {
+    return memoryToken;
+  }
 }
 
 export function setStoredToken(token) {
-  if (typeof window === 'undefined') {
+  memoryToken = token || null;
+  const storage = safeGetLocalStorage();
+  if (!storage) {
     return;
   }
-  if (token) {
-    localStorage.setItem('mpx_token', token);
-  } else {
-    localStorage.removeItem('mpx_token');
+  try {
+    if (token) {
+      storage.setItem('mpx_token', token);
+    } else {
+      storage.removeItem('mpx_token');
+    }
+  } catch (_error) {
+    // iOS private browsing and strict settings can block localStorage writes.
   }
 }
 
