@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ProbabilityChart } from '../../../components/ProbabilityChart';
+import { SongCover } from '../../../components/SongCover';
 import { SourceMetricChart } from '../../../components/SourceMetricChart';
 import { getStoredToken, request } from '../../../lib/api';
 
@@ -10,21 +11,6 @@ function niceDate(value) {
     return 'N/A';
   }
   return new Date(value).toLocaleString();
-}
-
-function SongArt({ url, alt }) {
-  if (url) {
-    return (
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-800">
-        <img src={url} alt={alt} className="h-full w-full object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div className="grid h-16 w-16 shrink-0 place-items-center rounded border border-slate-700 bg-[linear-gradient(145deg,#0f172a,#1e293b_45%,#2563eb)]">
-      <span className="text-[9px] uppercase tracking-wide text-slate-200">Track</span>
-    </div>
-  );
 }
 
 export default function MarketDetailPage({ params }) {
@@ -129,7 +115,7 @@ export default function MarketDetailPage({ params }) {
             <p className="mt-2 text-sm text-muted">{market.description}</p>
             {(market.songTitle || market.songArtists?.length > 0 || market.songUrl || market.songImageUrl) && (
               <div className="mt-4 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                <SongArt url={market.songImageUrl} alt={market.songTitle || market.title} />
+                <SongCover imageUrl={market.songImageUrl} label={market.songTitle || market.title} />
                 <div className="min-w-0 text-xs">
                   {market.songTitle && <p className="truncate font-medium text-white">{market.songTitle}</p>}
                   {market.songArtists?.length > 0 && (
