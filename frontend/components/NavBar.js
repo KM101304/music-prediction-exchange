@@ -3,9 +3,9 @@ import { LogoMark } from './LogoMark';
 
 const navItems = [
   { href: '/about', label: 'About' },
+  { href: '/create', label: 'Create' },
   { href: '/portfolio', label: 'Portfolio' },
   { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/admin', label: 'Admin' },
 ];
 
 export function NavBar() {

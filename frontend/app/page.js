@@ -25,7 +25,15 @@ export default function HomePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.allSettled([request('/markets'), request('/stats/public')])
+    async function loadMarketsWithRetry() {
+      try {
+        return await request('/markets');
+      } catch (_firstError) {
+        return request('/markets');
+      }
+    }
+
+    Promise.allSettled([loadMarketsWithRetry(), request('/stats/public')])
       .then((results) => {
         const [marketsResult, statsResult] = results;
 

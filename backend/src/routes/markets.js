@@ -11,6 +11,15 @@ const tradeSchema = z.object({
   shares: z.number().positive().max(50000),
 });
 
+const createMarketSchema = z.object({
+  title: z.string().min(5).max(200),
+  description: z.string().min(10).max(5000),
+  resolutionCriteria: z.string().min(10).max(5000),
+  closeAt: z.string().datetime(),
+  settleBy: z.string().datetime(),
+  lmsrB: z.number().positive().max(100000).optional(),
+});
+
 function extractSongSnapshot(row) {
   const payload = row.latest_raw_payload && typeof row.latest_raw_payload === 'object' ? row.latest_raw_payload : null;
   return {
@@ -165,6 +174,56 @@ router.get('/:id/data-points', async (req, res, next) => {
       }))
     );
   } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/', requireAuth, async (req, res, next) => {
+  try {
+    const payload = createMarketSchema.parse(req.body);
+    const closeAt = new Date(payload.closeAt);
+    const settleBy = new Date(payload.settleBy);
+
+    if (Number.isNaN(closeAt.getTime()) || Number.isNaN(settleBy.getTime())) {
+      return res.status(400).json({ error: 'Invalid closeAt/settleBy date' });
+    }
+    if (closeAt <= new Date()) {
+      return res.status(400).json({ error: 'closeAt must be in the future' });
+    }
+    if (settleBy <= closeAt) {
+      return res.status(400).json({ error: 'settleBy must be after closeAt' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO markets (
+         title,
+         description,
+         resolution_criteria,
+         close_at,
+         settle_by,
+         status,
+         lmsr_b,
+         created_by,
+         source_type
+       )
+       VALUES ($1,$2,$3,$4,$5,'OPEN',$6,$7,'MANUAL')
+       RETURNING *`,
+      [
+        payload.title.trim(),
+        payload.description.trim(),
+        payload.resolutionCriteria.trim(),
+        closeAt.toISOString(),
+        settleBy.toISOString(),
+        payload.lmsrB ?? 100,
+        req.user.userId,
+      ]
+    );
+
+    return res.status(201).json(mapMarket(result.rows[0]));
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ error: 'Invalid request body', details: error.issues });
+    }
     return next(error);
   }
 });
