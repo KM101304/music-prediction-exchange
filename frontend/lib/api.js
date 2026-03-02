@@ -1,5 +1,5 @@
-const API_URL = '/api';
 const DIRECT_API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+const API_URL = DIRECT_API_URL || '/api';
 let memoryToken = null;
 
 function safeGetLocalStorage() {
@@ -32,7 +32,7 @@ export async function request(path, { method = 'GET', token, body, headers: extr
   try {
     response = await doFetch(API_URL);
   } catch (_error) {
-    if (!DIRECT_API_URL) {
+    if (!DIRECT_API_URL || API_URL === DIRECT_API_URL) {
       throw new Error('Network connection failed. Please try again.');
     }
     try {
@@ -42,7 +42,7 @@ export async function request(path, { method = 'GET', token, body, headers: extr
     }
   }
 
-  if ((!response || response.status >= 500) && DIRECT_API_URL) {
+  if ((!response || response.status >= 500) && DIRECT_API_URL && API_URL !== DIRECT_API_URL) {
     try {
       const retryResponse = await doFetch(DIRECT_API_URL);
       if (retryResponse.ok || retryResponse.status < 500) {
