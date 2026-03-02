@@ -19,6 +19,10 @@ const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   adminApiKey: required('ADMIN_API_KEY'),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  corsOrigins: (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean),
   startingCredits: Number(process.env.DEFAULT_STARTING_CREDITS || 10000),
   defaultLmsrB: Number(process.env.DEFAULT_LMSR_B || 100),
   demoAdminEmail: process.env.DEMO_ADMIN_EMAIL || 'admin@musicx.local',
