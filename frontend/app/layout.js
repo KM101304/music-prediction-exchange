@@ -17,7 +17,12 @@ export default function RootLayout({ children }) {
     <html lang="en" className="dark">
       <body>
         <NavBar />
-        <main className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-4 sm:py-6">{children}</main>
+        <main
+          className="mx-auto w-full max-w-6xl min-h-[calc(100dvh-72px)] px-3 py-4 pb-24 sm:px-4 sm:py-6"
+          style={{ paddingBottom: 'max(6rem, env(safe-area-inset-bottom))' }}
+        >
+          {children}
+        </main>
       </body>
     </html>
   );

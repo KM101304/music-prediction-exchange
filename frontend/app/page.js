@@ -57,7 +57,7 @@ export default function HomePage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:gap-6">
-      <section className="order-2 space-y-4 lg:order-1 lg:space-y-5">
+      <section className="order-1 space-y-4 lg:space-y-5">
         <div className="card overflow-hidden p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -149,7 +149,18 @@ export default function HomePage() {
         )}
 
         {loading && <p className="card p-4 text-sm text-muted">Loading markets...</p>}
-        {error && <p className="card border-rose-500/40 bg-rose-900/20 p-4 text-sm text-rose-200">{error}</p>}
+        {error && (
+          <div className="card border-rose-500/40 bg-rose-900/20 p-4 text-sm text-rose-200">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-3 rounded bg-rose-400/20 px-3 py-1.5 text-xs text-rose-100 hover:bg-rose-400/30"
+            >
+              Reload
+            </button>
+          </div>
+        )}
 
         {!loading && !error && (
           <div className="space-y-3">
@@ -188,7 +199,7 @@ export default function HomePage() {
         )}
       </section>
 
-      <aside className="order-1 space-y-4 lg:order-2">
+      <aside className="order-2 space-y-4">
         <AuthWidget />
 
         <div className="card p-4">
