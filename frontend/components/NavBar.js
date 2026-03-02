@@ -12,21 +12,21 @@ const navItems = [
 export function NavBar() {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-800/90 bg-slate-950/95 pt-[max(env(safe-area-inset-top),0px)] backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
         <Link href="/" className="group flex min-w-0 items-center gap-2 text-sm sm:gap-3">
           <LogoMark className="h-8 w-8 shrink-0" />
           <div className="min-w-0">
             <p className="truncate font-semibold text-white">Music Prediction Exchange</p>
-            <p className="truncate text-[10px] uppercase tracking-wide text-slate-400">Play-money simulation</p>
+            <p className="hidden truncate text-[10px] uppercase tracking-wide text-slate-400 sm:block">Play-money simulation</p>
           </div>
         </Link>
 
-        <nav className="flex w-full items-center gap-1 overflow-x-auto pb-1 text-sm text-slate-300 sm:w-auto sm:overflow-visible sm:pb-0">
+        <nav className="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1 overflow-x-auto px-1 pb-1 text-sm text-slate-300 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0 sm:pb-0">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap rounded px-3 py-1.5 hover:bg-slate-800 hover:text-white"
+              className="whitespace-nowrap rounded px-3 py-1.5 hover:bg-slate-800 hover:text-white active:scale-[0.98]"
             >
               {item.label}
             </Link>

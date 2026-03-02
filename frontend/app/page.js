@@ -67,7 +67,7 @@ export default function HomePage() {
                 Track crowd probability on stream milestones, open positions with play-money credits, and review settlement outcomes.
               </p>
             </div>
-            <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
+            <div className="grid w-full grid-cols-2 gap-2 text-xs sm:min-w-56 sm:w-auto">
               <div className="rounded-lg bg-slate-900/70 p-3">
                 <p className="text-slate-400">Total users</p>
                 <p className="mt-1 text-lg font-semibold text-white">
@@ -165,7 +165,12 @@ export default function HomePage() {
         {!loading && !error && (
           <div className="space-y-3">
             {markets.map((market) => (
-              <Link key={market.id} prefetch={false} href={`/market/${market.id}`} className="card block p-4 hover:border-slate-700">
+              <Link
+                key={market.id}
+                prefetch={false}
+                href={`/market/${market.id}`}
+                className="card block touch-manipulation p-4 hover:border-slate-700 active:scale-[0.995]"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <SongCover imageUrl={market.songImageUrl} label={market.songTitle || market.title} />
@@ -180,7 +185,7 @@ export default function HomePage() {
                       <p className="mt-1 text-xs text-muted">{market.description}</p>
                     </div>
                   </div>
-                  <span className="badge">{market.status}</span>
+                  <span className="badge shrink-0">{market.status}</span>
                 </div>
 
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
@@ -209,7 +214,12 @@ export default function HomePage() {
           {!loading && topMovers.length === 0 && <p className="mt-2 text-xs text-muted">No market movement yet.</p>}
           <div className="mt-3 space-y-3 text-sm">
             {topMovers.map((m) => (
-              <Link key={m.id} prefetch={false} href={`/market/${m.id}`} className="block rounded-lg bg-slate-900/60 p-3 hover:bg-slate-900">
+              <Link
+                key={m.id}
+                prefetch={false}
+                href={`/market/${m.id}`}
+                className="block touch-manipulation rounded-lg bg-slate-900/60 p-3 hover:bg-slate-900 active:scale-[0.995]"
+              >
                 <div className="flex items-center gap-2">
                   <SongCover imageUrl={m.songImageUrl} label={m.songTitle || m.title} compact />
                   <p className="line-clamp-2 text-xs text-slate-200">{m.title}</p>

@@ -10,6 +10,8 @@ html {
   background: radial-gradient(circle at 20% 0%, #15243b 0%, #0b111b 44%, #070b12 100%);
   min-height: 100%;
   margin: 0;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -18,10 +20,15 @@ body {
   background: radial-gradient(circle at 20% 0%, #15243b 0%, #0b111b 44%, #070b12 100%);
   overflow-x: hidden;
   margin: 0;
+  width: 100%;
 }
 
 a {
   @apply transition-colors;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .card {
@@ -44,5 +51,11 @@ button {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  body {
+    min-height: -webkit-fill-available;
   }
 }
