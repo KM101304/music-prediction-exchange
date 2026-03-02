@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { lmsrPriceYes, executeBinaryTrade } = require('../lib/lmsr');
+const { hasSpotifyCreds, searchSpotifyTracks } = require('../lib/spotify');
 
 const router = express.Router();
 
@@ -18,6 +19,9 @@ const createMarketSchema = z.object({
   closeAt: z.string().datetime(),
   settleBy: z.string().datetime(),
   lmsrB: z.number().positive().max(100000).optional(),
+  sourceType: z.enum(['MANUAL', 'SPOTIFY_TRACK_POPULARITY']).default('MANUAL'),
+  spotifyTrackId: z.string().min(5).max(100).optional(),
+  targetMetricValue: z.number().positive().optional(),
 });
 
 function extractSongSnapshot(row) {
@@ -81,6 +85,25 @@ router.get('/', async (_req, res, next) => {
        ORDER BY m.created_at DESC`
     );
     return res.json(markets.rows.map(mapMarket));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/spotify/search', requireAuth, async (req, res, next) => {
+  try {
+    const query = String(req.query.q || '').trim();
+    const limit = Number(req.query.limit || 8);
+
+    if (query.length < 2) {
+      return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    }
+    if (!hasSpotifyCreds()) {
+      return res.status(503).json({ error: 'Spotify search is not configured' });
+    }
+
+    const tracks = await searchSpotifyTracks(query, limit);
+    return res.json({ tracks });
   } catch (error) {
     return next(error);
   }
@@ -193,6 +216,12 @@ router.post('/', requireAuth, async (req, res, next) => {
     if (settleBy <= closeAt) {
       return res.status(400).json({ error: 'settleBy must be after closeAt' });
     }
+    if (payload.sourceType === 'SPOTIFY_TRACK_POPULARITY' && !payload.spotifyTrackId) {
+      return res.status(400).json({ error: 'spotifyTrackId is required for Spotify markets' });
+    }
+    if (payload.sourceType === 'SPOTIFY_TRACK_POPULARITY' && !payload.targetMetricValue) {
+      return res.status(400).json({ error: 'targetMetricValue is required for Spotify markets' });
+    }
 
     const result = await pool.query(
       `INSERT INTO markets (
@@ -204,9 +233,11 @@ router.post('/', requireAuth, async (req, res, next) => {
          status,
          lmsr_b,
          created_by,
-         source_type
+         source_type,
+         spotify_track_id,
+         target_metric_value
        )
-       VALUES ($1,$2,$3,$4,$5,'OPEN',$6,$7,'MANUAL')
+       VALUES ($1,$2,$3,$4,$5,'OPEN',$6,$7,$8,$9)
        RETURNING *`,
       [
         payload.title.trim(),
@@ -216,6 +247,9 @@ router.post('/', requireAuth, async (req, res, next) => {
         settleBy.toISOString(),
         payload.lmsrB ?? 100,
         req.user.userId,
+        payload.sourceType,
+        payload.spotifyTrackId ?? null,
+        payload.targetMetricValue ?? null,
       ]
     );
 

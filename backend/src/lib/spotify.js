@@ -63,7 +63,36 @@ async function getSpotifyTrack(trackId) {
   };
 }
 
+async function searchSpotifyTracks(query, limit = 8) {
+  const token = await getSpotifyToken();
+  const q = encodeURIComponent(query);
+  const safeLimit = Math.max(1, Math.min(20, Number(limit) || 8));
+  const response = await fetch(`https://api.spotify.com/v1/search?type=track&q=${q}&limit=${safeLimit}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Spotify search request failed: ${response.status} ${text}`);
+  }
+
+  const data = await response.json();
+  const items = Array.isArray(data?.tracks?.items) ? data.tracks.items : [];
+  return items.map((track) => ({
+    trackId: track.id,
+    name: track.name,
+    artists: Array.isArray(track.artists) ? track.artists.map((a) => a.name) : [],
+    popularity: Number(track.popularity || 0),
+    spotifyUrl: track.external_urls?.spotify || null,
+    album: track.album?.name || null,
+    imageUrl: Array.isArray(track.album?.images) && track.album.images.length > 0 ? track.album.images[0].url : null,
+  }));
+}
+
 module.exports = {
   hasSpotifyCreds,
   getSpotifyTrack,
+  searchSpotifyTracks,
 };
