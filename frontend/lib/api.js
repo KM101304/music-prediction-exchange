@@ -1,4 +1,5 @@
 const API_URL = '/api';
+const DIRECT_API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 let memoryToken = null;
 
 function safeGetLocalStorage() {
@@ -18,16 +19,38 @@ export async function request(path, { method = 'GET', token, body, headers: extr
     headers.Authorization = `Bearer ${token}`;
   }
 
-  let response;
-  try {
-    response = await fetch(`${API_URL}${path}`, {
+  async function doFetch(baseUrl) {
+    return fetch(`${baseUrl}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
       cache: 'no-store',
     });
+  }
+
+  let response = null;
+  try {
+    response = await doFetch(API_URL);
   } catch (_error) {
-    throw new Error('Network connection failed. Please try again.');
+    if (!DIRECT_API_URL) {
+      throw new Error('Network connection failed. Please try again.');
+    }
+    try {
+      response = await doFetch(DIRECT_API_URL);
+    } catch (_error2) {
+      throw new Error('Network connection failed. Please try again.');
+    }
+  }
+
+  if ((!response || response.status >= 500) && DIRECT_API_URL) {
+    try {
+      const retryResponse = await doFetch(DIRECT_API_URL);
+      if (retryResponse.ok || retryResponse.status < 500) {
+        response = retryResponse;
+      }
+    } catch (_error) {
+      // Keep original response path.
+    }
   }
 
   const contentType = response.headers.get('content-type') || '';

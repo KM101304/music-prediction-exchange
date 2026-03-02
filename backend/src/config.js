@@ -30,6 +30,8 @@ const config = {
   demoAdminPassword: process.env.DEMO_ADMIN_PASSWORD || 'ChangeMe123!',
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID || '',
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+  autoSettleEnabled: (process.env.AUTO_SETTLE_ENABLED || 'true').toLowerCase() === 'true',
+  autoSettleIntervalMs: Number(process.env.AUTO_SETTLE_INTERVAL_MS || 300000),
 };
 
 module.exports = { config };

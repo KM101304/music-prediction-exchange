@@ -8,10 +8,13 @@
 
 html {
   background: radial-gradient(circle at 20% 0%, #15243b 0%, #0b111b 44%, #070b12 100%);
+  min-height: 100%;
 }
 
 body {
-  @apply min-h-screen bg-transparent text-slate-100 antialiased;
+  @apply min-h-screen text-slate-100 antialiased;
+  min-height: 100dvh;
+  background: radial-gradient(circle at 20% 0%, #15243b 0%, #0b111b 44%, #070b12 100%);
   overflow-x: hidden;
 }
 
